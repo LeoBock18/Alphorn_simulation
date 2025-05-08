@@ -3,7 +3,7 @@ from scipy.signal import find_peaks
 import re
 import os
 import warnings
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 from mpi4py import MPI
 
@@ -158,14 +158,16 @@ def compute_resonance_freqs(results_path: str, freqs: np.ndarray):
 
 
 
-def plot_results(results_path: str, freqs: np.ndarray):
+def plot_results(results_path: str, freqs: np.ndarray, plots_dir: str = "plots"):
     """
-    Plots curves for input impedance.
+    Stores curves for input impedance inside a file with the same labeling name as results file.
 
     :param results_path: Path to results.
     :type R: str
-    :param freqs: Range of frequencies [Hz].
+    :param freqs: Range of frequencies [Hz] related to results data.
     :type freqs: ndarray
+    :param results_path: Folder where to store plots.
+    :type R: str
     """
 
     # Load data from file
@@ -195,17 +197,36 @@ def plot_results(results_path: str, freqs: np.ndarray):
 
     # Adjust layout
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # Leave space for suptitle
-    plt.show()
+
+    # Extract number of the file in input and use it to construct output file name
+    basename = os.path.basename(results_path)
+    match = re.search(r'(\d+)\.csv$', basename)
+    if not match:
+        warnings.warn(f"No trailing number found before '.msh' in filename: {results_path}. Automatically set number to 0")
+        number = 0
+    else:
+        number = match.group(1)
+
+    # Ensure the plots directory exists
+    os.makedirs(plots_dir, exist_ok=True)
+
+    # Construct the plot filename inside directory
+    plot_filename = f"plot{number}.png"
+    plot_path = os.path.join(plots_dir, plot_filename)
+
+    # Save the plot to a file
+    plt.savefig(plot_path)
 
 
 def main():
 
     mesh_filename = "alphorn_meshes/mesh23.msh"
-    freqs = np.arange(281, 291, 1)
+    freqs = np.arange(281, 350, 1)
     R = 447.09 #mm
     u_n = 1.0*1000 # mm/s
 
     solve_helmholtz(mesh_filename, freqs, u_n, R, verbose = True)
+    plot_results("results/result23.csv", freqs)
 
 
 # Ensure the main function is called when the script is executed

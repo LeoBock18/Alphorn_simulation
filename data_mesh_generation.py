@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+import os
 
 def conical_piece(inlet_radius: float, outlet_radius: float, length: float, x_initial: float, tau: float):
     """
@@ -35,7 +36,7 @@ def conical_piece(inlet_radius: float, outlet_radius: float, length: float, x_in
     return coord_and_radii
 
 
-def assemble_mesh_data(intersection_radius: float, len_cone_1: float, len_cone_2: float, file_index: int, filename: str = "mesh_data/mesh_data", mouthpiece_flag: bool = True, len_cone_3: float = 825.0, len_cone_4: float = 465.0, mouthpiece_file: str = "mesh_data/mouthpiece.csv", bell_file: str = "mesh_data/final_bell.csv",  tau: float = 2.0, verbose: bool = False):
+def assemble_mesh_data(intersection_radius: float, len_cone_1: float, len_cone_2: float, file_index: int, folder: str = "mesh_data", mouthpiece_flag: bool = True, len_cone_3: float = 825.0, len_cone_4: float = 465.0, mouthpiece_file: str = "mesh_data/mouthpiece.csv", bell_file: str = "mesh_data/final_bell.csv",  tau: float = 2.0, verbose: bool = False):
     """
     Creates a CSV file of a mesh with the given parameters.
 
@@ -51,8 +52,8 @@ def assemble_mesh_data(intersection_radius: float, len_cone_1: float, len_cone_2
     :type len_cone_4: float
     :param file_index: Index used for creating output filename (useful when function is called inside a loop, avoids overwriting of data).
     :type file_index: int
-    :param filename: File name where to save mesh data.
-    :type filename: str
+    :param folder: Folder name where to save mesh data.
+    :type folder: str
     :param mouthpiece_flag: Indicates whether mesh includes a mouthpiece or starts directly with the conical part.
     :type mouthpiece_flag: bool
     :param mouthpiece_file: File from which mouthpiece data are loaded.
@@ -64,7 +65,6 @@ def assemble_mesh_data(intersection_radius: float, len_cone_1: float, len_cone_2
     :param verbose: Optional warning raiser for correct mesh construction.
     :type verbose: bool
     """
-
 
     # Raise warning if intersection_radius is not coherent with the overall geometry
     if verbose and not (6.5 <= intersection_radius <= 28):
@@ -104,10 +104,12 @@ def assemble_mesh_data(intersection_radius: float, len_cone_1: float, len_cone_2
         final_mesh = np.concatenate((cone_1, cone_2, cone_3, cone_4, final_bell), axis=0)
     
     # Create the file name by concatenating the string and integer
-    final_filename = f"{filename}{file_index}.csv"
+    final_filename = f"mesh_data{file_index}.csv"
+
+    final_path = os.path.join(folder, final_filename)
 
     # Save mesh in a file
-    np.savetxt(final_filename, final_mesh, delimiter=",", header="x-spline, y-spline, z-spline, radius", comments='', fmt="%.3f")
+    np.savetxt(final_path, final_mesh, delimiter=",", header="x-spline, y-spline, z-spline, radius", comments='', fmt="%.3f")
 
 
 
