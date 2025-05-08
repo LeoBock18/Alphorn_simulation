@@ -8,6 +8,7 @@ The repository is organized in the following way:
 * _data_mesh_generation.py_: file for constructiong centerlines and radii data to be used by Fabio Marcinno mesh implementation program. The most important function of this file is `assemble_mesh_data`, whose flexibility allows to change:
     * the geometrical properities of the first two conical parts of the instrument (lengths and radius of intersection)
     * the presence of absence of mouthpiece
+
 Mesh are constructed and stored in the folder `mesh_data` with a labeled name (e.g.`mesh_data1.csv`, `mesh_data2.csv`, ...). In this folder, the already present files `final_bell.csv` and `mouthpiece.csv` are obtained by image preprocessing, and are used for constructing the entire mesh.
 * _solver.py_: contains functions for solving Helmholz equation and compute results. In particular:
     * _solve_helmholtz_: solves PDEs and stores input impedance results in file. Labeling of output file is coherent with .msh file used for computations.
@@ -19,7 +20,8 @@ Mesh are constructed and stored in the folder `mesh_data` with a labeled name (e
     * _mesh1.msh_: coarse mesh
     * _mesh2.msh_: middle mesh
     * _mesh3.msh_: fine mesh
-    All of them are related to 32 mm intersection radius and 447.09 mm hemispherical output radius
+
+All of them are related to 32 mm intersection radius and 447.09 mm hemispherical output radius
 * _results_: folder with .csv files containing computed input impedance data (real part, imaginary part, modululs)
 * _plots_: folder with .png files with input impedance plots
 
