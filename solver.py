@@ -1,5 +1,9 @@
 import numpy as np
 from scipy.signal import find_peaks
+import re
+import os
+import warnings
+import matplotlib as plt
 
 from mpi4py import MPI
 
@@ -9,18 +13,27 @@ from petsc4py import PETSc
 import ufl
 
 
-def solve_helmholtz(filename: str, freqs: ndarray, u_n: float, R: float):
+def solve_helmholtz(mesh_filename: str, freqs: np.ndarray, u_n: float, R: float, results_dir: str = "results", verbose: bool = False):
     """
-    Solves the Helmholtz problem on the alphorn mesh given in input and calculate the resonance frequencies
-        Args:
-        filename (str): name of the file where mesh is stored
-        freqs (ndarray): range of frequencies where to solve Helmholtz
-        u_n (float): input velocity
-        R (float): radius of hemispherical part (MUST BE COHERENT WITH THE GIVEN MESH)
+    Solves the Helmholtz problem on the alphorn mesh given in input and calculates the input impedance for various freqs.
+    Real parts, Imaginary parts and Moduli are stored in a CSV file with the same labeling name as mesh file.
+
+    :param mesh_filename: Name of the file where the mesh is stored.
+    :type mesh_filename: str
+    :param freqs: Range of frequencies for which to solve Helmholtz [Hz].
+    :type freqs: ndarray
+    :param u_n: Input velocity [mm/s].
+    :type u_n: float
+    :param R: Radius of hemispherical part (must be coherent with the given mesh) [mm].
+    :type R: float
+    :param result_dir: Folder where to save results.
+    :type R: str
+    :param verbose: Displays progress in computation
+    :type verbose: bool
     """
 
     # Load the provided mesh
-    domain, _, facet_tags, _, _, _ = io.gmshio.read_from_msh(msh_file, MPI.COMM_WORLD, 0, gdim=3)
+    domain, _, facet_tags, _, _, _ = io.gmshio.read_from_msh(mesh_filename, MPI.COMM_WORLD, 0, gdim=3)
 
     # Define space
     V = fem.functionspace(domain, ("Lagrange", 1))
@@ -32,8 +45,6 @@ def solve_helmholtz(filename: str, freqs: ndarray, u_n: float, R: float):
     # Parameters
     rho0 = 1.225*1000/10**9  # g/mm^3
     c = 340.0*1000  # mm/s
-    u_n = 1.0*1000 # mm/s
-    R = 447.09 # mm
 
     # k changes with freq: define it as fem.Constant
     k = fem.Constant(domain, default_scalar_type(0))
@@ -48,12 +59,12 @@ def solve_helmholtz(filename: str, freqs: ndarray, u_n: float, R: float):
         - (k*R - 1j)/R * ufl.inner(p, v) * ds(3)
         - k**2 * ufl.inner(p, v) * dx
     )
-        
     L = 1j * c * rho0 * k * ufl.inner(u_n, v) * ds(2)
 
     p_a = fem.Function(V)
     p_a.name = "pressure"
 
+    # Define problem
     problem = LinearProblem(
         a,
         L,
@@ -75,7 +86,11 @@ def solve_helmholtz(filename: str, freqs: ndarray, u_n: float, R: float):
     Z_in_imag = []
     Z_moduli = []
 
-    for f in freqs:
+    for i, f in enumerate(freqs):
+        # Show optional loop progress
+        if verbose:
+            print(f"Processing item {i + 1} of {len(freqs)}")
+
         omega = 2 * np.pi * f
         k.value = omega / c
         
@@ -90,14 +105,109 @@ def solve_helmholtz(filename: str, freqs: ndarray, u_n: float, R: float):
         inlet_area = domain.comm.allreduce(inlet_area, op=MPI.SUM)
 
         # Compute average pressure at inlet
-        p_avg = p_integral / inlet_area
+        Z_in = p_integral / (u_n*inlet_area)
 
-        # Since u_n = 1 m/s, Z_in = p_avg / u_n = p_avg
-        Z_in_real.append(p_avg.real)
-        Z_in_imag.append(p_avg.imag)
-        Z_moduli.append(abs(p_avg))
+        Z_in_real.append(Z_in.real)
+        Z_in_imag.append(Z_in.imag)
+        Z_moduli.append(abs(Z_in))
     
+    # Stack results in a single array
+    results = np.column_stack((Z_in_real, Z_in_imag, Z_moduli))
+    
+    # Extract number of the file in input and use it to construct output file name
+    basename = os.path.basename(mesh_filename)
+    match = re.search(r'(\d+)\.msh$', basename)
+    if not match:
+        warnings.warn(f"No trailing number found before '.msh' in filename: {mesh_filename}. Automatically set number to 0")
+        number = 0
+    else:
+        number = match.group(1)
+
+    # Ensure the results directory exists
+    os.makedirs(results_dir, exist_ok=True)
+
+    # Construct the result filename inside directory
+    result_filename = f"result{number}.csv"
+    result_path = os.path.join(results_dir, result_filename)
+
+    # Save results to CSV
+    np.savetxt(result_path, results, delimiter=",", header="Real Z, Imag Z, Modulus Z", comments='', fmt="%.3f")
+
+
+def compute_resonance_freqs(results_path: str, freqs: np.ndarray):
+    """
+    Computes resonance frequencies.
+
+    :param results_path: Path to results.
+    :type R: str
+    :param freqs: Range of frequencies [Hz].
+    :type freqs: ndarray
+    :return: Resonance frequencies [Hz].
+    :rtype: ndarray
+    """  
+
+    # Load data from file
+    data = np.loadtxt(results_path, delimiter=",", skiprows=1)
+    Z_moduli = data[:, 2]
+
+    # Find indeces of peaks in input impedance moduli and use them to extract frequencies
     peaks, _ = find_peaks(Z_moduli)
-    # resonance_freqs = [(i, Z_mod[i]) for i in peaks]
-    resonance_freqs = peaks + freqs[0]
-    resonance_freqs
+    resonance_freqs = freqs[peaks]
+
+    return resonance_freqs
+
+
+
+def plot_results(results_path: str, freqs: np.ndarray):
+    """
+    Plots curves for input impedance.
+
+    :param results_path: Path to results.
+    :type R: str
+    :param freqs: Range of frequencies [Hz].
+    :type freqs: ndarray
+    """
+
+    # Load data from file
+    data = np.loadtxt(results_path, delimiter=",", skiprows=1)
+    Z_in_real = data[:, 0]
+    Z_in_imag = data[:, 1]
+    Z_moduli = data[:, 2]
+
+    # First subplot
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].plot(freqs, Z_in_real, label="Re(Z_in)")
+    axs[0].plot(freqs, Z_in_imag, label="Im(Z_in)")
+    axs[0].set_title('Real and Imaginary parts')
+    axs[0].legend()
+    axs[0].grid(True)
+
+    # Second subplot
+    axs[1].plot(freqs, Z_moduli)
+    axs[1].set_title('Moduli')
+    axs[1].grid(True)
+
+    # Main title for the whole figure
+    a = freqs[0]
+    b = freqs[-1]
+    fig.suptitle(f'Interval [{a}, {b}] Hz', fontsize=14)
+
+    # Adjust layout
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # Leave space for suptitle
+    plt.show()
+
+
+def main():
+
+    mesh_filename = "alphorn_meshes/mesh23.msh"
+    freqs = np.arange(281, 291, 1)
+    R = 447.09 #mm
+    u_n = 1.0*1000 # mm/s
+
+    solve_helmholtz(mesh_filename, freqs, u_n, R, verbose = True)
+
+
+# Ensure the main function is called when the script is executed
+if __name__ == "__main__":
+    main()

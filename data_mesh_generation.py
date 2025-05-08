@@ -1,16 +1,24 @@
 import numpy as np
 import warnings
 
-def conical_piece(inlet_radius, outlet_radius, length, x_initial, tau):
+def conical_piece(inlet_radius: float, outlet_radius: float, length: float, x_initial: float, tau: float):
     """
-    gives back coordinates and radii for a conical piece
-        Args:
-            inlet_radius (float): radius of the inlet part of the cone (smaller extremity)
-            outlet_radius (float): radius of the outlet part of the cone (bigger extremity)
-            length (float): length of the cone
-            x_initial (float): x-axis coordinate of the first point of the cone
-            tau (float): set discritization step along x-axis
+    Gives back np.array with coordinates and radii for a conical piece.
+
+    :param inlet_radius: The radius of the inlet part of the cone (smaller extremity).
+    :type inlet_radius: float
+    :param outlet_radius: The radius of the outlet part of the cone (bigger extremity).
+    :type outlet_radius: float
+    :param length: Length of the cone.
+    :type length: float
+    :param x_initial: x-axis coordinate of the first point of the cone.
+    :type x_initial: float
+    :param tau: Set discretization step along x-axis.
+    :type tau: float
+    :return: Coordinates and radii of the conical piece
+    :rtype: ndarray
     """
+
     # Compute cone slope
     m = (outlet_radius - inlet_radius) / length
     # Define x range
@@ -29,21 +37,34 @@ def conical_piece(inlet_radius, outlet_radius, length, x_initial, tau):
 
 def assemble_mesh_data(intersection_radius: float, len_cone_1: float, len_cone_2: float, file_index: int, filename: str = "mesh_data/mesh_data", mouthpiece_flag: bool = True, len_cone_3: float = 825.0, len_cone_4: float = 465.0, mouthpiece_file: str = "mesh_data/mouthpiece.csv", bell_file: str = "mesh_data/final_bell.csv",  tau: float = 2.0, verbose: bool = False):
     """
-    Creates csv file of a mesh with the given parameters
-        Args:
-            intersection_radius (float): the radius between first and second cones (measured at the end of first cone)
-            len_cone_1 (float): length of the first conical part
-            len_cone_2 (float): length of the second conical part
-            len_cone_3 (float): length of the third conical part (keep it default in our experiments)
-            len_cone_4 (float): length of the last conical part (keep it default in our experiments)
-            file_index (int): index used for creating output filename (useful when function is called inside a loop, avoids overwriting of data)
-            filename (str): file name where to save mesh data
-            mouthpiece_flag (bool): indicates whether mesh includes a mouthpiece or starts directly with the conical part
-            mouthpiece_file (str): file from which mouthpiece data are loaded
-            bell_file (str): file from which bell data are loaded
-            tau (float): set discritization step along x-axis
-            verbose (bool): optional warning raiser for right mesh costruction
+    Creates a CSV file of a mesh with the given parameters.
+
+    :param intersection_radius: The radius between first and second cones (measured at the end of first cone).
+    :type intersection_radius: float
+    :param len_cone_1: Length of the first conical part.
+    :type len_cone_1: float
+    :param len_cone_2: Length of the second conical part.
+    :type len_cone_2: float
+    :param len_cone_3: Length of the third conical part (keep it default in our experiments).
+    :type len_cone_3: float
+    :param len_cone_4: Length of the last conical part (keep it default in our experiments).
+    :type len_cone_4: float
+    :param file_index: Index used for creating output filename (useful when function is called inside a loop, avoids overwriting of data).
+    :type file_index: int
+    :param filename: File name where to save mesh data.
+    :type filename: str
+    :param mouthpiece_flag: Indicates whether mesh includes a mouthpiece or starts directly with the conical part.
+    :type mouthpiece_flag: bool
+    :param mouthpiece_file: File from which mouthpiece data are loaded.
+    :type mouthpiece_file: str
+    :param bell_file: File from which bell data are loaded.
+    :type bell_file: str
+    :param tau: Set discretization step along x-axis.
+    :type tau: float
+    :param verbose: Optional warning raiser for correct mesh construction.
+    :type verbose: bool
     """
+
 
     # Raise warning if intersection_radius is not coherent with the overall geometry
     if verbose and not (6.5 <= intersection_radius <= 28):
