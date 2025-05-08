@@ -1,7 +1,14 @@
 # Alphorn_simulation
 Numerical Simulation of the sound of an Alphorn, valid as Semester Project 2024-25 at EPFL
 
-## Repository infos
+<details open><summary><b>Table of contents</b></summary>
+   
+- [Repository Infos](#repository-infos)
+- [How to set up Docker image on VSCode](#docker_tutorial)
+- [How to run](#run)
+</details>
+
+## Repository infos <a name="repository-infos"></a>
 
 The repository is organized in the following way:
 * _bell_preprocessing_: folder that contains all the pipeline needed to create `final_bell.csv` and `mouthpiece.csv` files.
@@ -28,7 +35,7 @@ The repository is organized in the following way:
 **Important**: .msh file names should end with a number. In this way, file with results and plots will be generated accordingly to that number and a easy mapping between input and ouput can be made.
 
 
-## How to set up Docker image on VSCode
+## How to set up Docker image on VSCode <a name="docker_tutorial"></a>
 
 _solver.py_ needs a PETSc version which supports `complex128`. I made use of a [(Docker Image)](https://hub.docker.com/r/dolfinx/lab) specifically created for this type of problems. If working on Linux, after having installed Docker with the commands:
 
@@ -46,7 +53,8 @@ docker pull dolfinx/lab:nightly
 
 If you are programming on VSCode, then you just need to run the `run_docker.sh` bash file for running the container. The file `.devcontainer/devcontainer.json` will do the rest.
 
-## How to run
+## How to run <a name="run"></a>
+
 
 _data_mesh_generation.py_ can be run locally with only **numpy**, **warnings** and **os** libraries. Simply change main file data to construct different mesh data files.
 
